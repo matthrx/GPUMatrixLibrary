@@ -6,7 +6,7 @@
 #include <functional>
 // #include <nvfunctional>
 
-// #include "arithmeticOperationsKernel.cuh"
+#include "arithmeticOperationsKernel.cuh"
 
 // It would be ideal to transfert data while executing kernel device operations
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -21,6 +21,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
       if (abort) { exit(code); }
     }
 }
+
+/**************************************************************************************************
+Kernel functions in cuh file
+************************************************************************************************/
+
+
 
 template <typename T>
 __host__ void addHost(T* a, T* b, T* c, int ROWS, int COLUMN){
@@ -52,26 +58,6 @@ __host__ void addHost(T* a, T* b, T* c, int ROWS, int COLUMN){
 template <typename T, typename F>
 __host__ __device__ F lambdaGPU(T x, std::function<F(T&)> func){
     return func(x);
-}
-
-
-template <typename T, typename F, typename Function>
-__global__ void applyLambdaToElementMatrixGPU(T* a, F* b, Function Func, int amountRows, int amountColumns) {
-    /*
-    Function parameter will be a device side lambda function on the host
-    */
-    // printf("%d", amountRows);
-    // cuPrintf("Running\n");
-    unsigned int tidX = threadIdx.x + blockIdx.x*blockDim.x;
-    unsigned int tidY = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x*tidY + tidX;
-    unsigned int offset{};
-    unsigned int index = tidX*amountColumns + tidY; 
-    // #pragma unroll
-    while (index + offset < amountColumns*amountRows){
-        *(b + index + offset) = Func(*(a + index + offset));
-        offset += stride;
-    }
 }
 
 
@@ -111,7 +97,7 @@ __host__ void applyLambdaToElementMatrix(const T* a, std::function<F(T&)> lambda
     gpuErrchk(cudaFree(d_result));
 
     std::cout << *(result + 20000) << std::endl;
-    // return result;
+    // return result;c
 }
 
 
