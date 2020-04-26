@@ -4,14 +4,19 @@
 #include <stdio.h>
 #include <math.h>       /* ceil */
 #include <functional>
-// #include <nvfunctional>
+#include <nvfunctional>
 
 #include "arithmeticOperationsKernel.cuh"
 
+
 // It would be ideal to transfert data while executing kernel device operations
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 #define THREAD_PER_BLOCK 32
 #define EXIT_SUCESS 0 
+#define __GPU_EXP__
+
+// typedef __device__ __host__ auto lambdaExpression;
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
 {
@@ -55,14 +60,18 @@ __host__ void addHost(T* a, T* b, T* c, int ROWS, int COLUMN){
 
 }
 
-template <typename T, typename F>
-__host__ __device__ F lambdaGPU(T x, std::function<F(T&)> func){
-    return func(x);
-}
+// template <typename T, typename F>
+// __host__ __device__ F lambdaGPU(T x, const nvstd::function<F(T&)> func){
+//     return func(x);
+// }
 
-
 template <typename T, typename F>
-__host__ void applyLambdaToElementMatrix(const T* a, std::function<F(T&)> lambdaFunction, int ROWS, int COLUMN){
+__host__ void applyLambdaToElementMatrix(const T* a, nvstd::function<F(T&)> lambdaFunction, int ROWS, int COLUMN){
+    
+    #ifndef __CUDACC_EXTENDED_LAMBDA__
+    #error "please compile with --expt-extended-lambda"
+    #endif
+
     const size_t SIZE_T = ROWS*COLUMN*sizeof(T);
     const size_t SIZE_F = ROWS*COLUMN*sizeof(F);
     T* d_a;
@@ -71,7 +80,7 @@ __host__ void applyLambdaToElementMatrix(const T* a, std::function<F(T&)> lambda
     F* result = new F[ROWS*COLUMN];
     // int x = 2;
     // lambdaGPU(x , lambdaFunction);
-    auto lambdaFunctionOnGPU = [=]  __host__ __device__  (T& x) -> F {return pow(x,2);}; // need of --expt-extended-lambda
+    // __device__ auto lambdaFunctionOnGPU = lambdaFunction; // need of --expt-extended-lambda
     
     // std::cout  << lambdaFunctionOnGPU(x) << std::endl;
     gpuErrchk(cudaMalloc((void**)&d_a, SIZE_T));
@@ -84,9 +93,9 @@ __host__ void applyLambdaToElementMatrix(const T* a, std::function<F(T&)> lambda
 
     // dim3 blocksPerGrid(16, 16);
     dim3 threadsPerBlock(THREAD_PER_BLOCK, THREAD_PER_BLOCK);
-    std::cout << *(a + 20000) << std::endl;
+    // std::cout << *(a + 20000) << std::endl;
 
-    applyLambdaToElementMatrixGPU<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_result, lambdaFunctionOnGPU, ROWS, COLUMN);
+    applyLambdaToElementMatrixGPU<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_result, lambdaFunction, ROWS, COLUMN);
     // applyLambdaToElementMatrixGPU<<<(1, 1), (1, 1) >>>(d_a, d_result, lambdaFunctionOnGPU, ROWS, COLUMN);
 
     gpuErrchk(cudaPeekAtLastError());
@@ -100,7 +109,6 @@ __host__ void applyLambdaToElementMatrix(const T* a, std::function<F(T&)> lambda
     // return result;c
 }
 
-
 // double carre(int x){
 //     return pow(x, 2);
 // }
@@ -110,7 +118,7 @@ int main(void){
     const long int COLUMNS_MATRIX = 32000;
     int* matrix = new int[ROWS_MATRIX*COLUMNS_MATRIX];
 
-    auto carre = [](int x){return pow(x,2);};
+    auto carre = [] __GPU_EXP__ (int x){return pow(x,2);};
     for (unsigned int i = 0; i < (ROWS_MATRIX*COLUMNS_MATRIX); i ++){
         *(matrix + i) = reinterpret_cast<int>(rand()%10);
     }

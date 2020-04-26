@@ -14,7 +14,7 @@ __global__ void addGPU(T* a, T* b, T* c, int amountRows, int amountColumns) {
     */
     unsigned int tidColumns = threadIdx.x + blockIdx.x*blockDim.x;
     unsigned int tidRows = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
+    unsigned long int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
     unsigned int offset{};
     unsigned int index = tidRows*amountColumns + tidColumns; 
     #pragma unroll
@@ -33,7 +33,7 @@ __global__ void substractGPU(T* a, T* b, T* c, int amountRows, int amountColumns
     */
     unsigned int tidColumns = threadIdx.x + blockIdx.x*blockDim.x;
     unsigned int tidRows = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
+    unsigned long int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
     unsigned int offset{};
     unsigned int index = tidRows*amountColumns + tidColumns; 
     #pragma unroll
@@ -51,7 +51,7 @@ __global__ void multiplyGPU(T* a, T* b, T* c, int amountRows, int amountColumns)
     */
     unsigned int tidColumns = threadIdx.x + blockIdx.x*blockDim.x;
     unsigned int tidRows = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
+    unsigned long int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
     unsigned int offset{};
     unsigned int index = tidRows*amountColumns + tidColumns; 
     #pragma unroll
@@ -69,7 +69,7 @@ __global__ void scalarMultiplyGPU(U a, T* b, T* c, int amountRows, int amountCol
     */
     unsigned int tidColumns = threadIdx.x + blockIdx.x*blockDim.x;
     unsigned int tidRows = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
+    unsigned long int stride = blockDim.x*gridDim.x + blockDim.y+gridDim.y;
     unsigned int offset{};
     unsigned int index = tidRows*amountColumns + tidColumns; 
     #pragma unroll
@@ -88,7 +88,7 @@ __global__ void applyLambdaToElementMatrixGPU(T* a, F* b, Function Func, int amo
     // cuPrintf("Running\n");
     unsigned int tidX = threadIdx.x + blockIdx.x*blockDim.x;
     unsigned int tidY = threadIdx.y + blockIdx.y*blockDim.y;
-    unsigned int stride = blockDim.x*gridDim.x*tidY + tidX;
+    unsigned long int stride = blockDim.x*gridDim.x*tidY + tidX;
     unsigned int offset{};
     unsigned int index = tidX*amountColumns + tidY; 
     #pragma unroll
