@@ -2,22 +2,8 @@
 #define __STATISTIC_OPERATIONS_KERNEL_CUH__
 
 #include <cuda.h>
-#include <cuda_profiler_api.h>
 #include <iostream>
 #include <stdlib.h>
-
-
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-#define EXIT_SUCESS 0
-
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
-{
-    if (code != cudaSuccess)
-    {
-      std::cerr << cudaGetErrorString(code) << " file : " << file << " line : " <<  line << std::endl;
-      if (abort) { exit(code); }
-    }
-}
 
 template <typename T>
 __global__ void minGPU(T* a, T* min, int amountColumns, int amountRows, int* mutex) {
@@ -26,7 +12,6 @@ __global__ void minGPU(T* a, T* min, int amountColumns, int amountRows, int* mut
     we'll use fminf which is CUDA optimised
     T must be float or double or int
     */
-    const static unsigned int SIZE = blockDim.x*blockDim.y;
     unsigned int tidX = threadIdx.x + blockDim.x* blockIdx.x;
     unsigned int tidY = threadIdx.y + blockDim.y* blockIdx.y;
     unsigned long int stride = gridDim.x*blockDim.x + gridDim.y*blockDim.y;
@@ -38,7 +23,7 @@ __global__ void minGPU(T* a, T* min, int amountColumns, int amountRows, int* mut
         tempMin = fminf(tempMin, *(a + index + offset));
         offset += stride;
     }
-    unsigned int indexCache = (threadIdx.x*(blockDim.x-1)+  threadIdx.y)/2;
+    unsigned int indexCache = (threadIdx.x*(blockDim.x-1)+  threadIdx.y);
     cache[indexCache] = tempMin;
     __syncthreads();
     
@@ -76,7 +61,7 @@ __global__ void maxGPU(T* a, T* max, int amountColumns, int amountRows, int* mut
         tempMax = fmaxf(tempMax, *(a + index + offset));
         offset += stride;
     }
-    unsigned int indexCache = (threadIdx.x*(blockDim.x-1)+  threadIdx.y)/2;
+    unsigned int indexCache = (threadIdx.x*(blockDim.x-1)+  threadIdx.y);
     cache[indexCache] = tempMax;
     __syncthreads();
     
@@ -111,10 +96,9 @@ __global__ void meanGPU(T* a, T* mean, int amountColumns, int amountRows, int* m
         offset += stride;
     }
     unsigned int indexCache = (threadIdx.x*(blockDim.x-1)+  threadIdx.y);
-    if (offset != 0) {
-        cache[indexCache] = (sum/(offset/stride));
-        __syncthreads();
-    }   
+    cache[indexCache] = (sum/(offset/stride));
+    __syncthreads();
+     
     #pragma unroll
     sum = reinterpret_cast<T>(0);// Hardware is optimized to use all SIMT threads at once, how many cache lines - we'll wirte  vector4
     if (threadIdx.x + threadIdx.y == 0){
