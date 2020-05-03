@@ -13,7 +13,7 @@ typedef struct {
 } Matrix;
 
 
-__global__ void transpose(const Matrix  __restrict__ a, Matrix b,) {
+__global__ void transpose(const Matrix  __restrict a, Matrix b,) {
     unsigned int tidX = threadIdx.x + blockDim.x* blockIdx.x;
     unsigned int tidY = threadIdx.y + blockDim.y* blockIdx.y;
     unsigned long int stride = gridDim.x*blockDim.x + gridDim.y*blockDim.y; // Total amount of threads. 
@@ -36,7 +36,7 @@ __global__ void transpose(const Matrix  __restrict__ a, Matrix b,) {
     }
 }
 
-__global__ void dot(const Matrix  __restrict__ a, const Matrix __restrict__  b, Matrix c) {
+__global__ void dot(const Matrix  __restrict a, const Matrix __restrict  b, Matrix c) {
     /*
     Following the hypothesis that we are using digital type, double , float or int
     */
@@ -56,8 +56,13 @@ __global__ void dot(const Matrix  __restrict__ a, const Matrix __restrict__  b, 
             intermediateValue += (a_tmp.z  * b_tmp.z);
             intermediateValue += (a_tmp.w * b_tmp.w);
             }
-        *c(tidY*a.rows + tidX = intermediateValue;
+        *c(tidY*a.rows + tidX) = intermediateValue;
         }
+}
+
+
+__global__ void inverse(const Matrix __restrict__ a, Matrix b) {
+    
 }
 
 int main(void){
