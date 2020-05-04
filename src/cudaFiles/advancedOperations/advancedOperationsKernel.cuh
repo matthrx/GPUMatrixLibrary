@@ -13,30 +13,30 @@ typedef struct {
 } Matrix;
 
 
-__global__ void transpose(const Matrix  __restrict a, Matrix b,) {
+__global__ void transpose(const T*  __restrict a, T* b, int ROWS, int COLUMNS) {
     unsigned int tidX = threadIdx.x + blockDim.x* blockIdx.x;
     unsigned int tidY = threadIdx.y + blockDim.y* blockIdx.y;
     unsigned long int stride = gridDim.x*blockDim.x + gridDim.y*blockDim.y; // Total amount of threads. 
     unsigned int offset{};
-    unsigned int index = tidX*a.columns + tidY;    // we'll use cache memory L2 because of its rate of 2,000GBps higher thant GDRAM (300GBps) and PCIe (16GBps) - SM is at 20,000GBps
+    unsigned int index = tidX*COLUMNS + tidY;    // we'll use cache memory L2 because of its rate of 2,000GBps higher thant GDRAM (300GBps) and PCIe (16GBps) - SM is at 20,000GBps
     
     extern __shared__ T cache[]; //size of ceil((ROWS*COLUMNS)/(gridX*gridY*blockX*blockY))
     
     #pragma unroll
-    while (index+offset < a.rows*a.columns){
+    while (index+offset < ROWS*COLUMNS){
         cache[((threadIdx.x+blockDim.x*(offset/stride))*(blockDim.x-1)+ threadIdx.y)] = *(a+index+offset);
         offset += stride;
     }
     __syncthreads();
     offset = 0;
     #pragma unroll
-    while (index+offset < a.rows*a.columns){
+    while (index+offset < ROWS*COLUMNS){
         *(b + tidY*amountRows + tidX + offset)  = cache[((threadIdx.x+blockDim.x*(offset/stride))*(blockDim.x-1)+ threadIdx.y)];
         offset += stride;
     }
 }
 
-__global__ void dot(const Matrix  __restrict a, const Matrix __restrict  b, Matrix c) {
+__global__ void dot(const T*  __restrict a, const T* __restrict  b, T* c, int ROWS, int COLUMNS) {
     /*
     Following the hypothesis that we are using digital type, double , float or int
     */
@@ -46,16 +46,21 @@ __global__ void dot(const Matrix  __restrict a, const Matrix __restrict  b, Matr
     unsigned int offset{};
     
     T intermediateValue{};
-    if (tidX < a.columns && tidY < b.rows){
+    if (tidX < COLUMNS && tidY < ROWS){
         #pragma unroll
-        for (unsigned int i = 0; i < a.columns; i += 4){
-            double4 a_tmp = reinterpret_cast<double4*>(&a.elements[i+a.columns*tidY])[0];
-            double4 b_tmp = reinterpret_cast<double4*>(&b.elements[i+b.columns*tidY])[0];
+        unsigned int i;
+        for (i = 0; i < COLUMNS; i += 4){
+            double4 a_tmp = reinterpret_cast<double4*>(&a.elements[i+COLUMNS*tidY])[0];
+            double4 b_tmp = reinterpret_cast<double4*>(&b.elements[i*COLUMNS+tidX])[0]; // columns for a is row for b
             intermediateValue += (a_tmp.x * b_tmp.x);
             intermediateValue += (a_tmp.y * b_tmp.y);
             intermediateValue += (a_tmp.z  * b_tmp.z);
             intermediateValue += (a_tmp.w * b_tmp.w);
             }
+        int rest = COLUMNS%4;
+        if(rest != 0)
+            rest--;
+            intermediateValue += (a[(COLUMNS-rest)+COLUMNS*tidY]*b[(COLUMNS-res)*COLUMNS+tidX])
         *c(tidY*a.rows + tidX) = intermediateValue;
         }
 }
