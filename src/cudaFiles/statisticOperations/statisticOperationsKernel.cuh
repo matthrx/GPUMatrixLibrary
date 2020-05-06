@@ -115,10 +115,5 @@ __global__ void meanGPU(T* a, T* mean, int amountColumns, int amountRows, int* m
 
 }
 
-int main(void){
-    // kernel call is structured this way <<<Dg, Db, Ns, S>>>
-    return EXIT_SUCESS;
-}
-
 
 #endif

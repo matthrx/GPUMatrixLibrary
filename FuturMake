@@ -1,4 +1,6 @@
 g++ -fopenmp -O3 -std=c++11 -DHAVE_CUBLAS -DADD_ -I/usr/local/cuda/include -I/usr/local/magma/include -c -o advancedOperationInterface.o advancedOperationInterface.cpp
 
 
-g++ -fopenmp -o advancedOperationsInterface.o advancedOperations -L../../../lib -lm -lmagma -L/usr/local/cuda/lib64 -L/usr/lib -lcudart                               
+g++ -fopenmp -o advancedOperationInterface advancedOperationInterface.o -L/usr/local/cuda/lib64 -L/usr/local/lib -L/usr/local/magma/lib -lm -lmagma -lcudart -lcublas -lopenblas
+
+

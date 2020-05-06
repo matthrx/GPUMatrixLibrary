@@ -8,6 +8,7 @@
 #include <cuda_runtime.h>
 // #include <helper_cuda.h>
 // #include <helper_functions.h>
+#include "initialisation.cuh"
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
@@ -79,10 +80,6 @@ __host__ void initialisation(void){
     cudaDeviceProp deviceProps;
     gpuErrchk(cudaGetDeviceProperties(&deviceProps, *device));
     std::cout << "CUDA device " << deviceProps.name << std::endl;
-    cudaDeviceProp* kernelConfig = &deviceProps;
-}
 
-int main(int argc, char *argv[]){
-    initialisation();
-    return 0;
+
 }
