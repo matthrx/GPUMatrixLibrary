@@ -118,15 +118,16 @@ Matrix<T> inverseMatrixNormalPrecision(Matrix<T> m) {
     // magma_dprint(m.ROWS, m.COLUMNS, m.data, 8);
     // free(a);
     free(pivot);
-    magma_free(dataToReturn);
     magma_free(da);
     magma_queue_destroy(queue);                     //  destroy  queuemagma_finalize ();    
     magma_finalize();
 
 
-    return Matrix<float> {
-        m.ROWS, m.COLUMNS, dataToReturn
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = dataToReturn;
+    return toReturn;
 }
 // std::tuple<double*,double*> 
 template <typename T>

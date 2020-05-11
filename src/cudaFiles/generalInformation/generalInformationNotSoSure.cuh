@@ -5,5 +5,7 @@
 #include <cuda.h>
 
 extern cudaDeviceProp deviceProps;
+template <typename T> struct Matrix<T>;
+template <typename T> void gpuPrint(Matrix<T>, unsigned int, unsigned int, bool, bool);
 
 #endif 

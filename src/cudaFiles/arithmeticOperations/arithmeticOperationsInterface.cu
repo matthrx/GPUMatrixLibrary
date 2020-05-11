@@ -7,8 +7,8 @@
 #include <nvfunctional>
 #include <assert.h>
 
-#include "../initialisation/initialisation.cuh"
-#include "../../GPUOperations.h"
+// #include "../initialisation/initialisation.cuh"
+// #include "../../GPUOperations.h"
 #include "arithmeticOperationsKernel.cuh"
 
 
@@ -21,8 +21,9 @@
 #define min(a, b) (((a)>(b)) ? (b) : (a))
 #define carre(x) (x*x)
 #define assertm(exp, msg) assert(((void)msg, exp))
+#define functionDeviceHost(func) (__device__ __host__  func)
 
-const cudaDeviceProp deviceProps;
+// const cudaDeviceProp deviceProps;
 // typedef __device__ __host__ auto lambdaExpression;
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
@@ -38,17 +39,23 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 Kernel functions in cuh file
 ************************************************************************************************/
 
+
+
 template <typename T>
 struct Matrix {
     size_t ROWS;
     size_t COLUMNS;
     T* data;
 }; 
+// const cudaDeviceProp deviceProps;
+struct typeProps{
+    int maxGridSize;
+} variableProps = {65355};
 
 template <typename T>
 __host__ Matrix<T> add(Matrix<T> a, Matrix<T> b){
-    assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
-    const size_t SIZE = a.ROWS*b.COLUMN*sizeof(T);
+    assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
+    const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
     
     gpuErrchk(cudaMalloc((void**)&da, SIZE));
@@ -59,10 +66,10 @@ __host__ Matrix<T> add(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min((a.ROWS/THREADS_PER_BLOCK_DIM), (variableProps.maxGridSize)) , min((a.COLUMNS/THREADS_PER_BLOCK_DIM), (variableProps.maxGridSize)));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    addGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMN);
+    addGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -70,18 +77,19 @@ __host__ Matrix<T> add(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-    gpuErrchk(cudaFreeHost(hc));
 
-    return Matrix<T>{
-        a.ROWS; a.COLUMNS; hc
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = hc;
+    return toReturn;
 
 }
 
 template <typename T>
 __host__ Matrix<T> substract(Matrix<T> a, Matrix<T> b){
-    assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
-    const size_t SIZE = a.ROWS*b.COLUMN*sizeof(T);
+    assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
+    const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
     
     gpuErrchk(cudaMalloc((void**)&da, SIZE));
@@ -92,10 +100,10 @@ __host__ Matrix<T> substract(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    substractGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, ROWS, COLUMN);
+    substractGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -103,18 +111,19 @@ __host__ Matrix<T> substract(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-    gpuErrchk(cudaFreeHost(hc));
 
-    return Matrix<T>{
-        a.ROWS; a.COLUMNS; hc
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = hc;
+    return toReturn;
 
 }
 
 template <typename T>
 __host__ Matrix<T> multiply(Matrix<T> a, Matrix<T> b){
-    assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
-    const size_t SIZE = a.ROWS*b.COLUMN*sizeof(T);
+    assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
+    const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
     
     gpuErrchk(cudaMalloc((void**)&da, SIZE));
@@ -125,10 +134,10 @@ __host__ Matrix<T> multiply(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    multiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, ROWS, COLUMN);
+    multiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -138,16 +147,18 @@ __host__ Matrix<T> multiply(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaFree(dc));
     gpuErrchk(cudaFreeHost(hc));
 
-    return Matrix<T>{
-        a.ROWS; a.COLUMNS; hc
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = hc;
+    return toReturn;
 
 }
 
 template <typename T>
 __host__ Matrix<T> scalarMultiply(T a, Matrix<T> b){
     // assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
-    const size_t SIZE = a.ROWS*b.COLUMN*sizeof(T);
+    const size_t SIZE = b.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
     
     gpuErrchk(cudaMalloc((void**)&da, sizeof(T)));
@@ -158,10 +169,10 @@ __host__ Matrix<T> scalarMultiply(T a, Matrix<T> b){
     gpuErrchk(cudaMemcpy(da, a, sizeof(T), cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    scalarMultiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, ROWS, COLUMN);
+    scalarMultiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -169,18 +180,19 @@ __host__ Matrix<T> scalarMultiply(T a, Matrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-    gpuErrchk(cudaFreeHost(hc));
 
-    return Matrix<T>{
-        a.ROWS; a.COLUMNS; hc
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = hc;
+    return toReturn;
 
 }
 
 template <typename T>
 __host__ Matrix<T> divide(Matrix<T> a, Matrix<T> b){
-    assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
-    const size_t SIZE = a.ROWS*b.COLUMN*sizeof(T);
+    assertm((a.ROWS==b.ROWS && a.COLUMNS == b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
+    const size_t SIZE = a.ROWS*a.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
     
     gpuErrchk(cudaMalloc((void**)&da, SIZE));
@@ -191,10 +203,10 @@ __host__ Matrix<T> divide(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    divideGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, ROWS, COLUMN);
+    divideGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -202,11 +214,12 @@ __host__ Matrix<T> divide(Matrix<T> a, Matrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-    gpuErrchk(cudaFreeHost(hc));
 
-    return Matrix<T>{
-        a.ROWS; a.COLUMNS; hc
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = hc;
+    return toReturn;
 
 }
 // template <typename T, typename F>
@@ -214,15 +227,16 @@ __host__ Matrix<T> divide(Matrix<T> a, Matrix<T> b){
 //     return func(x);
 // }
 
+
 template <typename T, typename F>
-__host__ Matrix<T> applyLambdaToElementMatrix(const T* a, nvstd::function<F(T&)> lambdaFunction, int ROWS, int COLUMN){
+__host__ Matrix<F> applyLambdaToElementMatrix(Matrix<T> a, F lambdaFunction){
     
     #ifndef __CUDACC_EXTENDED_LAMBDA__
     #error "please compile with --expt-extended-lambda add it to make file"
     #endif
 
-    const size_t SIZE_T = a.ROWS*a.COLUMN*sizeof(T);
-    const size_t SIZE_F = a.ROWS*a.COLUMN*sizeof(F);
+    const size_t SIZE_T = a.ROWS*a.COLUMNS*sizeof(T);
+    const size_t SIZE_F = a.ROWS*a.COLUMNS*sizeof(F);
     T* d_a;
     F* d_result, *result;
     // int x = 2;
@@ -237,11 +251,11 @@ __host__ Matrix<T> applyLambdaToElementMatrix(const T* a, nvstd::function<F(T&)>
     gpuErrchk(cudaMemcpy(d_a, a, SIZE_T, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(d_result, result, SIZE_F, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])) , min((ROWS/THREADS_PER_BLOCK_DIM), (deviceProps.maxGridSize[0])));
+    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
     // std::cout << *(a + 20000) << std::endl;
 
-    applyLambdaToElementMatrixGPU<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_result, lambdaFunction, ROWS, COLUMN);
+    applyLambdaToElementMatrixGPU<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_result, lambdaFunction, a.ROWS, a.COLUMNS);
     // applyLambdaToElementMatrixGPU<<<(1, 1), (1, 1) >>>(d_a, d_result, lambdaFunctionOnGPU, ROWS, COLUMN);
 
     gpuErrchk(cudaPeekAtLastError());
@@ -250,14 +264,27 @@ __host__ Matrix<T> applyLambdaToElementMatrix(const T* a, nvstd::function<F(T&)>
 
     gpuErrchk(cudaFree(d_a));
     gpuErrchk(cudaFree(d_result));
-    gpuErrchk(cudaFreeHost(result));
 
     // return result;c
-    return Matrix<T> {
-        a.ROWS; a.COLUMNS; result
-    };
+    Matrix<T> toReturn;
+    toReturn.ROWS = a.ROWS;
+    toReturn.COLUMNS = a.COLUMNS;
+    toReturn.data = result;
+    return toReturn;
 }
 
-// double carre(int x){
-//     return pow(x, 2);
-// }
+int main(void){
+    struct Matrix<double> matrix= Matrix<double>{16, 16, new double[16*16]};
+
+    for (unsigned int i = 0; i<matrix.ROWS*matrix.COLUMNS; i++){
+        matrix.data[i] = 2;
+        // std::cout << "Value " << i << " : " << matrix.data[i] << " ---" << std::flush;
+    }
+
+    struct Matrix<double> result = applyLambdaToElementMatrix<double>(matrix, carre);
+    // gpuPrint(matrix, 10, 10);
+    // gpuPrint(result, 10, 10);
+    delete [] matrix.data;
+    // delete [] matrixR.data;
+    return 0;
+}

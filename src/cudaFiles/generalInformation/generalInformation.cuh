@@ -8,9 +8,9 @@
 #include <cuda_runtime.h>
 // #include <helper_cuda.h>
 // #include <helper_functions.h>
-#include "initialisation.cuh"
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+#define assertm(exp, msg) assert(((void)msg, exp))
 
 // typedef struct {
 //     int warpsSize;
@@ -21,6 +21,7 @@
 //     int maxThreadsPerMultiProcessor;
 
 // } KernelConfiguration;
+extern cudaDeviceProp deviceProps;
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
 {
@@ -77,9 +78,62 @@ __host__ void initialisation(void){
         std::cout << "Warning this library only uses one GPU, wait for an update..." << std::endl;
     }
     gpuErrchk(cudaGetDevice(device));
-    cudaDeviceProp deviceProps;
     gpuErrchk(cudaGetDeviceProperties(&deviceProps, *device));
     std::cout << "CUDA device " << deviceProps.name << std::endl;
 
 
 }
+
+template <typename T>
+struct Matrix {
+    size_t ROWS;
+    size_t COLUMNS;
+    T* data;
+};
+
+template <typename T> 
+__host__ void gpuPrint(Matrix<T> a, unsigned int rows, unsigned int columns, bool isTop = true, bool isLeft = true){
+    assertm((a.ROWS >= rows && a.COLUMNS >= columns), "error : rows and columns in arguments are higher than matrix size ");
+    std::cout << "Matrix dimensions are [" << a.ROWS << "," << a.COLUMNS << "] - displaying a "<< rows << "x" << columns << " insight //" << std::endl;
+    switch (isTop){
+        case true:
+            if (isLeft) {
+                // in this case we'll print the rows first rows and the columns first columns
+                for (unsigned int i = 0; i<rows; i++){
+                    for (unsigned int j = 0; j<columns; j++){
+                        std::cout.width(5); std::cout << a.data[i*a.COLUMNS+j] << " " << std::flush;
+                    }
+                    std::cout << std::endl;
+                }
+            }
+            else {
+                // in this case we'll print the rows first rows and the columns last columns
+                for (unsigned int i = 1; i<rows; i++){
+                    std::cout << std::endl;
+                    for (unsigned int j = (a.COLUMNS-columns); j<a.COLUMNS; j++){
+                        std::cout << a.data[i*a.COLUMNS+j] << "  " << std::flush;
+                }
+            }
+            break;
+        case false:
+            if (isLeft){
+                for (unsigned int i = a.ROWS-rows; i<a.ROWS; i++){
+                    std::cout << std::endl;
+                    for (unsigned int j = 0; j<columns; j++){
+                        std::cout << a.data[i*a.COLUMNS+j] << " " << std::flush;
+                    }
+                }
+            }
+            else {
+                for (unsigned int i = a.ROWS-rows; i<a.ROWS; i++){
+                    for (unsigned int j = (a.COLUMNS-columns); j<a.COLUMNS; j++){
+                        std::cout.width(20); std::cout << a.data[i*a.COLUMNS+j] << " " << std::flush;
+                    }
+                    std::cout << std::endl;
+            }
+            break;
+            }
+        }
+    }
+}
+

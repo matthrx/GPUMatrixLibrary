@@ -16,5 +16,11 @@ template <typename T> std::tuple<double*, double*, double*> singularValueDecompo
 template <typename T> std::tuple<float*, float*, float*> singularValueDecompositionNormalPrecision(Matrix<T> m);
 template <typename T> Matrix<T> transposeInterface(Matrix<T>);
 template <typename T> Matrix<T> dotInterface(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> add(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> substract(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> multiply(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> scalarMultiply(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> divide(Matrix<T>, Matrix<T>);
+template <typename T> Matrix<T> applyLambdaToElementMatrix(Matrix<T>, Matrix<T>);
 
 #endif __GPU_OPERATIONS_H__
