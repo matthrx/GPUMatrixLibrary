@@ -12,6 +12,9 @@
 // #include "../../GPUOperations.h"
 // #include "../initialisation/initialisation.cuh"
 #include "statisticOperationsKernel.cuh"
+#include "../../GpuMatrix.h"
+#include "../generalInformation/generalInformation.h"
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 #define assertm(exp, msg) assert(((void)msg, exp))
 #define THREADS_PER_BLOCK_DIM 16
@@ -33,9 +36,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-template <typename T>
-__host__ T minGPUMatrixFunction(Matrix<T> a){
-    const size_t SIZE = a.ROWS*a.COLUMNS*sizeof(T);
+template <typename T> 
+T GpuMatrix<T>::minGpuMatrix(void){
+    const size_t SIZE = this->ROWS*this->COLUMNS*sizeof(T);
     int* mutex = 0;
     T *dmin, *da;
     T *minValue = new T;
@@ -51,15 +54,15 @@ __host__ T minGPUMatrixFunction(Matrix<T> a){
         return NULL;
     }
     gpuErrchk(cudaMemset(mutex, 0, sizeof(int)));
-    gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(da, this->data, SIZE, cudaMemcpyHostToDevice));
     // gpuErrchk(cudaMemcpy(dmin, min, sizeof(T), cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
+    dim3 blocksPerGrid(min(ceil((float)this->ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)this->COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((a.ROWS*a.COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, a.ROWS, a.COLUMNS, mutex);
-    float sharedMemorySize = (float)(a.ROWS*a.COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
-    minGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmin, a.ROWS, a.COLUMNS, mutex);
+    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((this->ROWS*this->COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, this->ROWS, this->COLUMNS, mutex);
+    float sharedMemorySize = (float)(this->ROWS*this->COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
+    minGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmin, this->ROWS, this->COLUMNS, mutex);
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
@@ -73,8 +76,8 @@ __host__ T minGPUMatrixFunction(Matrix<T> a){
 
 
 template <typename T>
-__host__ T maxGPUMatrixFunction(Matrix<T> a){
-    const size_t SIZE = a.ROWS*a.COLUMNS*sizeof(T);
+T GpuMatrix<T>::maxGpuMatrix(void){
+    const size_t SIZE = this->ROWS*this->COLUMNS*sizeof(T);
     int* mutex = 0;
     T *dmax, *da;
     T *maxValue = new T;
@@ -90,17 +93,17 @@ __host__ T maxGPUMatrixFunction(Matrix<T> a){
         return NULL;
     }
     gpuErrchk(cudaMemset(mutex, 0, sizeof(int)));
-    gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(da, this->data, SIZE, cudaMemcpyHostToDevice));
     // gpuErrchk(cudaMemcpy(dmin, min, sizeof(T), cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
+    dim3 blocksPerGrid(min(ceil((float)this->ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)this->COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    std::cout << ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM) << std::endl;
+    std::cout << ceil((float)this->ROWS/(float)THREADS_PER_BLOCK_DIM) << std::endl;
 
-    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((a.ROWS*a.COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, a.ROWS, a.COLUMNS, mutex);
-    float sharedMemorySize = (float)(a.ROWS*a.COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
-    maxGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmax, a.ROWS, a.COLUMNS, mutex);
+    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((this->ROWS*this->COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, this->ROWS, this->COLUMNS, mutex);
+    float sharedMemorySize = (float)(this->ROWS*this->COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
+    maxGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmax, this->ROWS, this->COLUMNS, mutex);
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
@@ -109,14 +112,13 @@ __host__ T maxGPUMatrixFunction(Matrix<T> a){
     gpuErrchk(cudaFree(dmax));
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(mutex));    
-    std::cout << *maxValue << std::endl;
     return *maxValue;
 }
 
 
-template <typename T>
-__host__ T meanGPUMatrixFunction(Matrix<T> a){
-    const size_t SIZE = a.ROWS*a.COLUMNS*sizeof(T);
+template <typename T> 
+T GpuMatrix<T>::meanGpuMatrix(void){
+    const size_t SIZE = this->ROWS*this->COLUMNS*sizeof(T);
     int* mutex = 0;
     T *dmean, *da;
     T *meanValue = new T;
@@ -128,15 +130,15 @@ __host__ T meanGPUMatrixFunction(Matrix<T> a){
     gpuErrchk(cudaMemset(mutex, 0, sizeof(int)));
     gpuErrchk(cudaMemset(dmean, 0, sizeof(T)));
 
-    gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(da, this->data, SIZE, cudaMemcpyHostToDevice));
     // gpuErrchk(cudaMemcpy(dmin, min, sizeof(T), cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), variableProps.maxGridSize));
+    dim3 blocksPerGrid(min(ceil((float)this->ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)this->COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((a.ROWS*a.COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, a.ROWS, a.COLUMNS, mutex);
-    float sharedMemorySize = (float)(a.ROWS*a.COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
-    meanGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmean, a.ROWS, a.COLUMNS, mutex);
+    // minGPU<<<blocksPerGrid, threadsPerBlock, ceil(((this->ROWS*this->COLUMNS)/(blocksPerGrid.x*THREADS_PER_BLOCK_DIM*blocksPerGrid.y*THREADS_PER_BLOCK_DIM+1))*256*sizeof(T))>>>(da, dmin, this->ROWS, this->COLUMNS, mutex);
+    float sharedMemorySize = (float)(this->ROWS*this->COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
+    meanGPU<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, dmean, this->ROWS, this->COLUMNS, mutex);
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
@@ -146,7 +148,7 @@ __host__ T meanGPUMatrixFunction(Matrix<T> a){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(mutex));    
     std::cout << *meanValue << std::endl;
-    return *(meanValue)/(a.ROWS*a.COLUMNS);
+    return *(meanValue)/(this->ROWS*this->COLUMNS);
 }
 
 
