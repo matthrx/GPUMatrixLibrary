@@ -36,20 +36,18 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-__host__ std::string exec(const char* cmd) {
+std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) {
-        throw std::runtime_error("popen() failed!");
-    }
+    assertm(pipe, "popen() failed");
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         result += buffer.data();
     }
     return result;
 }
 
-__host__ void sofwareVerification(void){
+void sofwareVerification(void){
     std::cout << "Currently processing to the device verification and configuration for the GPU operations " << std::endl;
     // #if !defined(nvcc)
     // #error "nvcc is not defined as an environnement variable, please do it "
