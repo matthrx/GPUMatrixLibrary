@@ -68,13 +68,16 @@ void sofwareVerification(void){
     }
     if (numericVersion <= 8) {
         std::cerr << "Your cuda version is obsolete please upgrade it to at least version 8.0" << std::endl;
+        exit(0);
     }
     std::cout << "Cuda sotware identified ++++++++++++++++++\n" << result << std::endl;
 
 }
 
-template <class T>
-void GpuMatrix<T>::matrixGPU_init(void){
+void matrixGPU_init(bool verbose = false){
+    if (!(verbose)){
+        std::cout.setstate(std::ios_base::failbit);
+    }
     sofwareVerification();
     int* device = new int;
     gpuErrchk(cudaGetDeviceCount(device));
@@ -84,7 +87,10 @@ void GpuMatrix<T>::matrixGPU_init(void){
     gpuErrchk(cudaGetDevice(device));
     gpuErrchk(cudaGetDeviceProperties(&deviceProps, *device));
     std::cout << "CUDA device " << deviceProps.name << std::endl;
-
+    delete device;
+    if (!(verbose)){
+        std::cout.clear();
+    }
 
 }
 

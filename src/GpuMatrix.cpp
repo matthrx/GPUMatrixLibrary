@@ -14,7 +14,7 @@ GpuMatrix<T>::GpuMatrix(unsigned int rows, unsigned int columns, T* data) : ROWS
 }
 
 template <typename T>
-GpuMatrix<T>::~GpuMatrix()
+ void GpuMatrix<T>::free(void)
 {
     delete [] this->data;
 }

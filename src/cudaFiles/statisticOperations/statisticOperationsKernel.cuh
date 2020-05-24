@@ -25,7 +25,8 @@ __global__ void minGPU(T* a, T* min, int amountColumns, int amountRows, int* mut
         tempMin = fminf(tempMin, *(a + index + offset));
         offset += stride;
     }
-    extern __shared__ T cache[];
+    extern __shared__ __align__(sizeof(T)) unsigned char my_cache[];
+    T* cache = reinterpret_cast<T*>(my_cache);
     if (threadIdx.x == 0 && threadIdx.y == 0){
         for (unsigned int i = 0; i < (offset/stride)*(threadIdx.x*(blockDim.x-1)+  threadIdx.y); i++){
             cache[i] = *min;
@@ -62,21 +63,14 @@ __global__ void maxGPU(T* a, T* max, int amountColumns, int amountRows, int* mut
     unsigned long int stride = gridDim.x*blockDim.x*gridDim.y*blockDim.y;
     unsigned int offset{};
     unsigned int index = (blockIdx.x+ blockIdx.y * gridDim.x)*(blockDim.x * blockDim.y)+ (threadIdx.y * blockDim.x)+ threadIdx.x;
-    bool debug = false;
     T tempMax = *max;
-    __shared__ bool debugGlobal;
     if (index < amountColumns*amountRows) {
-        if (a[index] == 120){
-            debug = true;
-            debugGlobal = true;
-            __syncthreads();
-            printf("Hope\n");
-        }
         while (index + offset < amountColumns*amountRows){
             tempMax = fmaxf(tempMax, *(a + index + offset));
             offset += stride;
         }
-        extern __shared__ T cache[];
+        extern __shared__ __align__(sizeof(T)) unsigned char my_cache[];
+        T* cache = reinterpret_cast<T*>(my_cache);
         if (threadIdx.x == 0 && threadIdx.y == 0){
             for (unsigned int i = 0; i < (offset/stride)*blockDim.x*blockDim.y; i++){
                 cache[i] = *max;
@@ -114,7 +108,8 @@ __global__ void meanGPU(T* a, T* mean, int amountColumns, int amountRows, int* m
     unsigned int index = (blockIdx.x+ blockIdx.y * gridDim.x)*(blockDim.x * blockDim.y)+ (threadIdx.y * blockDim.x)+ threadIdx.x;
     
     T sum{};
-    extern __shared__ T cache[];
+    extern __shared__ __align__(sizeof(T)) unsigned char my_cache[];
+    T* cache = reinterpret_cast<T*>(my_cache);
     if (index < amountColumns*amountRows) {
         while(index+offset < amountRows*amountColumns){
             sum += a[index+offset];

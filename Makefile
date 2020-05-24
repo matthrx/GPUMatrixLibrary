@@ -32,7 +32,7 @@ LIBRARY_NAME = libgpumatrix
 # Source file directory:
 SRC_DIR = src
 CUDA_DIR = src/cudaFiles
-# Object file directory:
+# Object file directory:f a in b 
 OBJ_DIR = bin
 
 # Include header file diretory:
@@ -43,12 +43,14 @@ INC_DIR = include
 
 # Target executable name:
 EXE = library
-FINAL_DEST = $(dest)/gpuMatrix-1.0.0
+
 # Object files:
 OBJS = $(OBJ_DIR)/advancedOperationsInterface.o $(OBJ_DIR)/advancedOperationsInterfaceMagma.o $(OBJ_DIR)/generalInformation.o $(OBJ_DIR)/arithmeticOperationsInterface.o $(OBJ_DIR)/statisticOperationsInterface.o $(OBJ_DIR)/GpuMatrix.o
 # VCU_FILES = vpath %.cu 
 
 ##########################################################
+dest ?= /usr/local
+FINAL_DEST = $(dest)/gpuMatrix-1.0.0
 
 ## Compile ##
 
@@ -65,6 +67,7 @@ install : $(OBJS)
 	$(CC) $(CC_FLAGS) -shared -o $(LIBRARY_NAME).so $(OBJS) link.o $(CUDA_INC_DIR) $(CUDA_LIB_DIR) $(CUDA_LINK_LIBS) $(CLASSIC_LIB_DIR) $(MAGMA_LIB_DIR) $(MAGMA_INC_DIR) $(MAGMA_LINK_LIBS)
 	ar crv $(LIBRARY_NAME).a $(OBJS)
 	$(shell rm link.o)
+
 	@mkdir -p $(FINAL_DEST)	
 	@echo Moving libraries to $(FINAL_DEST)
 	@mkdir -p $(FINAL_DEST)/include
@@ -72,6 +75,9 @@ install : $(OBJS)
 	@mv $(LIBRARY_NAME).a $(FINAL_DEST)/lib
 	@mv $(LIBRARY_NAME).so $(FINAL_DEST)/lib
 	@cp $(SRC_DIR)/GpuMatrix.h $(FINAL_DEST)/include
+	@if [ "$(FINAL_DEST)" != *"$(LD_LIBRARY_PATH)"* ]; then\
+		echo "Note : Think about adding this library to LD_LIBRARY_PATH through .bashrc file and then source .bashrc ";\
+	fi
 	@echo Success, libraries installed.
 
 # all : $(OBJS)

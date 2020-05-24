@@ -42,7 +42,7 @@ Kernel functions in cuh file
 ************************************************************************************************/
 
 template <typename T>
-GpuMatrix<T> add(GpuMatrix<T> a, GpuMatrix<T> b){
+GpuMatrix<T> GpuMatrix<T>::add(GpuMatrix<T> a, GpuMatrix<T> b){
     assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
     const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
@@ -66,14 +66,13 @@ GpuMatrix<T> add(GpuMatrix<T> a, GpuMatrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
     return toReturn;
 
 }
 
 template <typename T>
-GpuMatrix<T> substract(GpuMatrix<T> a, GpuMatrix<T> b){
+GpuMatrix<T> GpuMatrix<T>::substract(GpuMatrix<T> a, GpuMatrix<T> b){
     assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
     const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
@@ -98,14 +97,14 @@ GpuMatrix<T> substract(GpuMatrix<T> a, GpuMatrix<T> b){
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
 
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
     return toReturn;
 
 
 }
 
 template <typename T>
-GpuMatrix<T> multiply(GpuMatrix<T> a, GpuMatrix<T> b){
+GpuMatrix<T> GpuMatrix<T>::multiply(GpuMatrix<T> a, GpuMatrix<T> b){
     assertm((a.ROWS==b.ROWS && a.COLUMNS==b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
     const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
@@ -129,16 +128,15 @@ GpuMatrix<T> multiply(GpuMatrix<T> a, GpuMatrix<T> b){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
-    gpuErrchk(cudaFreeHost(hc));
 
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(a.ROWS, b.COLUMNS, hc);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(a.ROWS, b.COLUMNS, hc);
     return toReturn;
 
 
 }
 
 template <typename T>
-GpuMatrix<T> scalarMultiply(T a, GpuMatrix<T> b){
+GpuMatrix<T> GpuMatrix<T>::scalarMultiply(T a, GpuMatrix<T> b){
     // assertm((a.ROWS==b.ROWS && a.COLUMNS*b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
     const size_t SIZE = b.ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
@@ -148,13 +146,13 @@ GpuMatrix<T> scalarMultiply(T a, GpuMatrix<T> b){
     gpuErrchk(cudaMalloc((void**)&dc, SIZE));
     gpuErrchk(cudaHostAlloc((void**)&hc, SIZE, cudaHostAllocDefault));
 
-    gpuErrchk(cudaMemcpy(da, a, sizeof(T), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(da, &a, sizeof(T), cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
+    dim3 blocksPerGrid(min(ceil((float)b.ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)b.COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    scalarMultiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, a.ROWS, a.COLUMNS);
+    scalarMultiplyGPU<<<blocksPerGrid, threadsPerBlock>>>(da, db, dc, b.ROWS, b.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(hc,  dc, SIZE, cudaMemcpyDeviceToHost));
@@ -163,14 +161,14 @@ GpuMatrix<T> scalarMultiply(T a, GpuMatrix<T> b){
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
 
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(b.ROWS, b.COLUMNS, hc);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(b.ROWS, b.COLUMNS, hc);
     return toReturn;
 
 
 }
 
 template <typename T>
- GpuMatrix<T> divide(GpuMatrix<T> a, GpuMatrix<T> b){
+ GpuMatrix<T> GpuMatrix<T>::divide(GpuMatrix<T> a, GpuMatrix<T> b){
     assertm((a.ROWS==b.ROWS && a.COLUMNS == b.COLUMNS), "Error incompatible dimensions, can't apply the operator");
     const size_t SIZE = a.ROWS*a.COLUMNS*sizeof(T);
     T *da, *db, *dc, *hc;
@@ -195,7 +193,7 @@ template <typename T>
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(dc));
 
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(a.ROWS, a.COLUMNS, hc);
     return toReturn;
 
 
@@ -244,7 +242,7 @@ template <typename T, typename F>
     gpuErrchk(cudaFree(d_result));
 
     // return result;c
-    GpuMatrix<F> toReturn = new GpuMatrix<F>(a.ROWS, a.COLUMNS, result);
+    GpuMatrix<F> toReturn = GpuMatrix<F>(a.ROWS, a.COLUMNS, result);
     return toReturn;
 
 }
@@ -264,3 +262,6 @@ template <typename T, typename F>
 //     // delete [] matrixR.data;
 //     return 0;
 // }
+
+// template float twice<float>(float original)
+// template GpuMatrix<double> GpuMatrix<double>::add(GpuMatrix<double>, GpuMatrix<double>);
