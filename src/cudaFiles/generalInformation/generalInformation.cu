@@ -8,8 +8,8 @@
 #include <cuda_runtime.h>
 #include <assert.h>
 
-#include "../../GpuMatrix.h"
-#include "generalInformation.h"
+#include "../../GpuMatrix.hpp"
+#include "generalInformation.hpp"
 // #include <helper_cuda.h>
 // #include <helper_functions.h>
 
@@ -94,8 +94,8 @@ void matrixGPU_init(bool verbose = false){
 
 }
 
-template <class T>
-void GpuMatrix<T>:: matrixGPU_print(unsigned int rows, unsigned int columns, bool isTop = true, bool isLeft = true){
+template <typename T>
+void GpuMatrix<T>::matrixGPU_print(unsigned int rows, unsigned int columns, bool isTop, bool isLeft){
     assertm((this->ROWS >= rows && this->COLUMNS >= columns), "error : rows and columns in arguments are higher than matrix size ");
     std::cout << "Matrix dimensions are [" << this->ROWS << "," << this->COLUMNS << "] - displaying a "<< rows << "x" << columns << " insight //" << std::endl;
     switch (isTop){
@@ -118,6 +118,7 @@ void GpuMatrix<T>:: matrixGPU_print(unsigned int rows, unsigned int columns, boo
                 std::cout << std::endl;
 
             }
+            }
             break;
         case false:
             if (isLeft){
@@ -135,9 +136,10 @@ void GpuMatrix<T>:: matrixGPU_print(unsigned int rows, unsigned int columns, boo
                     }
                     std::cout << std::endl;
             }
+            }
             break;
             }
-        }
-    }
+        printf("\n\n");
 }
+    
 

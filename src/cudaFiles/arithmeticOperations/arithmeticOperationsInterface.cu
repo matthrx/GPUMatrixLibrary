@@ -11,8 +11,8 @@
 // #include "../../GPUOperations.h"
 
 #include "arithmeticOperationsKernel.cuh"
-#include "../generalInformation/generalInformation.h"
-#include "../../GpuMatrix.h"
+#include "../generalInformation/generalInformation.hpp"
+#include "../../GpuMatrix.hpp"
 
 // It would be ideal to transfert data while executing kernel device operations
 

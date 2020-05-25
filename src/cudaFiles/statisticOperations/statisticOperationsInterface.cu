@@ -12,8 +12,8 @@
 // #include "../../GPUOperations.h"
 // #include "../initialisation/initialisation.cuh"
 #include "statisticOperationsKernel.cuh"
-#include "../../GpuMatrix.h"
-#include "../generalInformation/generalInformation.h"
+#include "../../GpuMatrix.hpp"
+#include "../generalInformation/generalInformation.hpp"
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 #define assertm(exp, msg) assert(((void)msg, exp))
@@ -61,9 +61,9 @@ T GpuMatrix<T>::minGpuMatrix(void){
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(minValue,  dmin, sizeof(T), cudaMemcpyDeviceToHost));
-    std::cout << "Min value in gpumatrix is " << *minValue << std::endl;
     gpuErrchk(cudaFree(dmin));
     gpuErrchk(cudaFree(da));
+    // std::cout << "MinGPU will be " << *minValue << std::endl;
     gpuErrchk(cudaFree(mutex));    
     return *minValue;
 }

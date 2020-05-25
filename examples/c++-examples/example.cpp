@@ -1,6 +1,11 @@
-#include <iostream>
+/*
+Compiled with the following instruction
+g++ -Wall -L/usr/local/gpuMatrix-1.0.0/lib -I/usr/local/gpuMatrix-1.0.0/include -o example example.cpp -lgpumatrix
+*/
 
-#include "GpuMatrix.h"
+#include <iostream>
+#include <cstdlib>
+#include "GpuMatrix.hpp"
 
 int main(void){
     matrixGPU_init(false);
@@ -9,20 +14,21 @@ int main(void){
     GpuMatrix<double> matrixB = GpuMatrix<double>(1200, 1200);
 
     for (unsigned int i = 0; i<(matrixA.ROWS*matrixA.COLUMNS); i++){
-        *(matrixA.data + i) = 2;
-        *(matrixB.data + i) = 3;
+        *(matrixA.data + i) = rand()%10;
+        *(matrixB.data + i) = rand()%10;
     }
 
-    matrixA.data[10000] = 1;
-    std::cout << "..." << std::endl;
-    GpuMatrix<double> matrixC = matrixA * matrixB;
-    double min = matrixC.minGpuMatrix();
-    std::cout << "MatA of function is " << matrixA.data[0] << std::endl;
-    std::cout << "Min is " << min << std::endl;
+    matrixA.matrixGPU_print(10, 10);
+    
+    GpuMatrix<double> matrixC = matrixA.dot(matrixB);
+    GpuMatrix<double> matrixD = matrixA.transpose();
+    double minMatrixA = matrixA.minGpuMatrix();
+    std::cout << "Minimum of matrix A is " << minMatrixA << std::endl;
 
-    std::cout << "MatC of function is " << matrixC.data[0] << std::endl;
+    matrixC.matrixGPU_print(10, 10);
+    //matrixD.matrixGPU_print(10, 10);
 
-    matrixA.free();
-    matrixB.free();
+    matrixA.freeMatrixGPU();
+    matrixB.freeMatrixGPU();
     return 0;
 }

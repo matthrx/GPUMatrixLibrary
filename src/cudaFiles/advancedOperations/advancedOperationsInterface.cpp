@@ -1,7 +1,4 @@
 
-#ifndef  __ADVANCED_OPERATION_INTERFACE_H__
-#define  __ADVANCED_OPERATION_INTERFACE_H__
-
 #include <iostream>
 #include <tuple>
 #include <cstdlib>
@@ -10,7 +7,7 @@
 #include "magma_v2.h"
 #include "magma_lapack.h"
 
-#include "../../GpuMatrix.h"
+#include "../../GpuMatrix.hpp"
 
 // #include "../../GPUOperations.h"
 
@@ -25,14 +22,16 @@ template <typename T>
 bool isDoublePointer(T *t){return false;}
 bool isDoublePointer(double *t){return true;}
 
+
 template<typename T>
 bool isFloatPointer(T *t){return false;}
 bool isFloatPointer(float *t) {return true;}
 
-template <typename T>
-GpuMatrix<T> GpuMatrix<T>::inverseMatrixHighPrecision(GpuMatrix<T> m) {
+template <>
+GpuMatrix<double> GpuMatrix<double>::inverse(GpuMatrix<double> m) {
     //It uses the LU decomposition with partial pivoting and row interchanges
-    assertm(isDoublePointer(m.data), "Types compatible, expecting a double for the data of matrix");
+    assertm(isDoublePointer(m.data), "Types incompatible, expecting a double for the data of matrix");
+
     magma_init();
     double gpu_time,*da, *dataToReturn, *dwork;
     // double *a; //matrix host side
@@ -72,15 +71,24 @@ GpuMatrix<T> GpuMatrix<T>::inverseMatrixHighPrecision(GpuMatrix<T> m) {
     magma_queue_destroy(queue);                     //  destroy  queuemagma_finalize ();    
     magma_finalize();
 
-
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(m.ROWS, m.COLUMNS, dataToReturn);
-    return toReturn;
+    if (info == 0){
+        GpuMatrix<double> toReturn = GpuMatrix<double>(m.ROWS, m.COLUMNS, dataToReturn);
+        return toReturn;
+    }
+    else if (info > 0){
+        std::cerr << "Error : the matrix is singular and it cannot be computed" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
 }
 
-template <typename T>
-GpuMatrix<T> GpuMatrix<T>::inverseMatrixNormalPrecision(GpuMatrix<T> m) {
+template <>
+GpuMatrix<float> GpuMatrix<float>::inverse(GpuMatrix<float> m) {
     //It uses the LU decomposition with partial pivoting and row interchanges
-    assertm(isFloatPointer(m.data), "Types compatible, expecting a float for the data of matrix");
+    assertm(isFloatPointer(m.data), "Types incompatible, expecting a float for the data of matrix");
     magma_init();
     float gpu_time,*da, *dataToReturn, *dwork;
     // double *a; //matrix host side
@@ -119,26 +127,35 @@ GpuMatrix<T> GpuMatrix<T>::inverseMatrixNormalPrecision(GpuMatrix<T> m) {
     magma_free(da);
     magma_queue_destroy(queue);                     //  destroy  queuemagma_finalize ();    
     magma_finalize();
-
-
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(m.ROWS, m.COLUMNS, dataToReturn);
-    return toReturn;
+    
+    if (info == 0){
+        GpuMatrix<float> toReturn = GpuMatrix<float>(m.ROWS, m.COLUMNS, dataToReturn);
+        return toReturn;
+    }
+    else if (info > 0){
+        std::cerr << "Error : the matrix is singular and it cannot be computed" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
 }
-// std::tuple<double*,double*> 
-template <typename T>
-std::tuple<double*, double*, double*> GpuMatrix<T>::getEigenValuesHighPrecisionNormalMatrix(bool leftEigenvector = false, bool rightEigenvector = false) {
+template <>
+std::tuple<double*, double*, double*> GpuMatrix<double>::getEigenValues(GpuMatrix<double> m, bool leftEigenvector, bool rightEigenvector) {
     /*
     Ax=λx, where x is right eigenvector, while in yA=λy, y is left eigenvector.
     If computed, the left eigenvectors arestored in columns of an array el and the right eigenvectors in columns of er. 
     */
-    assertm(isDoublePointer(this->data), "Types compatible, expecting a double for the data of matrix");
+    assertm(isDoublePointer(m.data), "Types incompatible, expecting a double for the data of matrix");
+
     magma_init();
     magma_queue_t queue = NULL;
     magma_int_t blockSize;
     magma_int_t dev = 0;
     magma_int_t err = 0; 
     magma_int_t info = 0;
-    magma_int_t partialSize = this->ROWS;
+    magma_int_t partialSize = m.ROWS;
     magma_int_t fullSize = partialSize*partialSize;
 
     double *hwork;
@@ -159,7 +176,7 @@ std::tuple<double*, double*, double*> GpuMatrix<T>::getEigenValuesHighPrecisionN
     magma_dmalloc_pinned (&er ,fullSize);   
     magma_dmalloc_pinned (&hwork ,lwork);
     // lapackf77_dlarnv (&ione ,ISEED ,&fullSize ,a);
-    lapackf77_dlacpy(MagmaFullStr, &partialSize, &partialSize, this->data, &partialSize, r, &partialSize);
+    lapackf77_dlacpy(MagmaFullStr, &partialSize, &partialSize, m.data, &partialSize, r, &partialSize);
     // std::cout << *(r + m.COLUMNS) << std::endl;
     if (leftEigenvector && rightEigenvector)
         magma_dgeev(MagmaVec, MagmaVec, partialSize, r, partialSize, vr1, vi1, el, partialSize, er, partialSize, hwork, lwork, &info);
@@ -178,24 +195,35 @@ std::tuple<double*, double*, double*> GpuMatrix<T>::getEigenValuesHighPrecisionN
 
     magma_queue_destroy(queue);                    
     magma_finalize();
-    return std::tuple<double*, double*, double*>(vr1, el, er); 
+    if (info == 0){
+        return std::tuple<double*, double*, double*>(vr1, el, er); 
+    }
+    else if (info > 0){
+        std::cerr << "Error : he QR algorithm failed to compute all the eigenvalues, and no eigenvectors have been computed" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
 
 }
 
-template <typename T>
-std::tuple<float*, float*, float*> GpuMatrix<T>::getEigenValuesNormalPrecisionNormalMatrix(bool leftEigenvector = false, bool rightEigenvector = false) {
+template <>
+std::tuple<float*, float*, float*> GpuMatrix<float>::getEigenValues(GpuMatrix<float> m, bool leftEigenvector, bool rightEigenvector) {
     /*
     Ax=λx, where x is right eigenvector, while in yA=λy, y is left eigenvector. (eigenvectors are normalized)
     If computed, the left eigenvectors arestored in columns of an array el and the right eigenvectors in columns of er. 
     */
-    assertm(isFloatPointer(this->data), "Types compatible, expecting a double for the data of matrix");
+    assertm(isFloatPointer(m.data), "Types incompatible, expecting a float for the data of matrix");
+     
     magma_init();
     magma_queue_t queue = NULL;
     magma_int_t blockSize;
     magma_int_t dev = 0;
     magma_int_t err = 0; 
     magma_int_t info = 0;
-    magma_int_t partialSize = this->ROWS;
+    magma_int_t partialSize = m.ROWS;
     magma_int_t fullSize = partialSize*partialSize;
 
     float *hwork;
@@ -215,7 +243,7 @@ std::tuple<float*, float*, float*> GpuMatrix<T>::getEigenValuesNormalPrecisionNo
     magma_smalloc_pinned (&el ,fullSize);
     magma_smalloc_pinned (&er ,fullSize);   
     magma_smalloc_pinned (&hwork ,lwork);
-    lapackf77_slacpy(MagmaFullStr, &partialSize, &partialSize, this->data, &partialSize, r, &partialSize);
+    lapackf77_slacpy(MagmaFullStr, &partialSize, &partialSize, m.data, &partialSize, r, &partialSize);
     // std::cout << *(r + m.COLUMNS) << std::endl;
     if (leftEigenvector && rightEigenvector)
         magma_sgeev(MagmaVec, MagmaVec, partialSize, r, partialSize, vr1, vi1, el, partialSize, er, partialSize, hwork, lwork, &info);
@@ -234,18 +262,29 @@ std::tuple<float*, float*, float*> GpuMatrix<T>::getEigenValuesNormalPrecisionNo
 
     magma_queue_destroy(queue);                    
     magma_finalize();
-    return std::tuple<float*, float*, float*>(vr1, el, er); 
-
+    if (info == 0){
+        return std::tuple<float*, float*, float*>(vr1, el, er); 
+    }
+    else if (info > 0){
+        std::cerr << "Error : he QR algorithm failed to compute all the eigenvalues, and no eigenvectors have been computed" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
 }
 
-template <typename T>
-std::tuple<double*, double*, double*> GpuMatrix<T>::getSingularValueDecompositionHighPrecision(void) {
+template <>
+std::tuple<double*, double*, double*> GpuMatrix<double>::getSingularValueDecomposition(GpuMatrix<double> m) {
     /*
     Singular value decomposition  (SVD) A=u * σ * transpose(v).
     dim(A)=[m,n] - dim(u)=[m,m] - dim(σ)=[m,n] - dim(T)=[n,n]
     Function description : u is orthogonal matrix, σ is m,n matrix dimensional full of zeo except for min(m,n) diagonal a,d 
     finally v
     */
+    assertm(isDoublePointer(m.data), "Types incompatible, expecting a double for the data of matrix");
+
     magma_init();
     double *r; // where matrix.data will be
     double *u, *vtrans;
@@ -254,35 +293,48 @@ std::tuple<double*, double*, double*> GpuMatrix<T>::getSingularValueDecompositio
     double work[1];
     double *hwork;
 
-    magma_dmalloc_pinned(&r, this->ROWS*this->COLUMNS);
-    magma_dmalloc_cpu(&u, this->ROWS*this->ROWS);
-    magma_dmalloc_cpu(&vtrans, this->COLUMNS*this->COLUMNS);
-    magma_dmalloc_cpu(&v1, min(this->ROWS, this->COLUMNS));
+    magma_dmalloc_pinned(&r, m.ROWS*m.COLUMNS);
+    magma_dmalloc_cpu(&u, m.ROWS*m.ROWS);
+    magma_dmalloc_cpu(&vtrans, m.COLUMNS*m.COLUMNS);
+    magma_dmalloc_cpu(&v1, min(m.ROWS, m.COLUMNS));
 
-    magma_int_t blockSize =  magma_get_dgesvd_nb(this->ROWS, this->COLUMNS);
-    lwork = carre(min(this->ROWS, this->COLUMNS)) + 2*min(this->ROWS, this->COLUMNS)*(1 + blockSize);
+    magma_int_t blockSize =  magma_get_dgesvd_nb(m.ROWS, m.COLUMNS);
+    lwork = carre(min(m.ROWS, m.COLUMNS)) + 2*min(m.ROWS, m.COLUMNS)*(1 + blockSize);
     magma_dmalloc_pinned(&hwork, lwork);
-    lapackf77_dlacpy(MagmaFullStr, &(this->ROWS), &(this->COLUMNS), this->data, &(this->ROWS), r, &(this->COLUMNS));
-    magma_dgesvd(MagmaNoVec, MagmaNoVec, this->ROWS, this->COLUMNS, r, this->ROWS, v1, u, this->ROWS, vtrans, this->COLUMNS, hwork, lwork, &info);
+    lapackf77_dlacpy(MagmaFullStr, &(m.ROWS), &(m.COLUMNS), m.data, &(m.ROWS), r, &(m.COLUMNS));
+    magma_dgesvd(MagmaNoVec, MagmaNoVec, m.ROWS, m.COLUMNS, r, m.ROWS, v1, u, m.ROWS, vtrans, m.COLUMNS, hwork, lwork, &info);
 
     // free(u);
     // free(vtrans);
     // free(v1);
     magma_free_pinned(r);
     magma_free_pinned(hwork);
-
-    return std::tuple<double*, double*, double*>(u, vtrans, v1);
+    if (info == 0){
+        return std::tuple<double*, double*, double*>(u, vtrans, v1);
 
     }
+    else if (info > 0){
+        std::cerr << "Error : Failed because " << info << "superdiagonals did not converge to zero " << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
+   
+    }
 
-template <typename T>
-std::tuple<float*, float*, float*> GpuMatrix<T>::getSingularValueDecompositionNormalPrecision(void) {
+
+template <>
+std::tuple<float*, float*, float*> GpuMatrix<float>::getSingularValueDecomposition(GpuMatrix<float> m) {
     /*
     Singular value decomposition  (SVD) A=u * σ * transpose(v).
     dim(A)=[m,n] - dim(u)=[m,m] - dim(σ)=[m,n] - dim(T)=[n,n]
     Function description : u is orthogonal matrix, σ is m,n matrix dimensional full of zeo except for min(m,n) diagonal a,d 
     finally v
     */
+    assertm(isFloatPointer(m.data), "Types incompatible, expecting a float for the data of matrix");
+ 
     magma_init();
     float *r; // where matrix.data will be
     float *u, *vtrans;
@@ -291,25 +343,34 @@ std::tuple<float*, float*, float*> GpuMatrix<T>::getSingularValueDecompositionNo
     float work[1];
     float *hwork;
 
-    magma_smalloc_pinned(&r, this->ROWS*this->COLUMNS);
-    magma_smalloc_cpu(&u, this->ROWS*this->ROWS);
-    magma_smalloc_cpu(&vtrans, this->COLUMNS*this->COLUMNS);
-    magma_smalloc_cpu(&v1, min(this->ROWS, this->COLUMNS));
+    magma_smalloc_pinned(&r, m.ROWS*m.COLUMNS);
+    magma_smalloc_cpu(&u, m.ROWS*m.ROWS);
+    magma_smalloc_cpu(&vtrans, m.COLUMNS*m.COLUMNS);
+    magma_smalloc_cpu(&v1, min(m.ROWS, m.COLUMNS));
 
-    magma_int_t blockSize =  magma_get_sgesvd_nb(this->ROWS, this->COLUMNS);
-    lwork = carre(min(this->ROWS, this->COLUMNS)) + 2*min(this->ROWS, this->COLUMNS)*(1 + blockSize);
+    magma_int_t blockSize =  magma_get_sgesvd_nb(m.ROWS, m.COLUMNS);
+    lwork = carre(min(m.ROWS, m.COLUMNS)) + 2*min(m.ROWS, m.COLUMNS)*(1 + blockSize);
     magma_smalloc_pinned(&hwork, lwork);
-    lapackf77_slacpy(MagmaFullStr, &(this->ROWS), &(this->COLUMNS), this->data, &(this->ROWS), r, &(this->COLUMNS));
-    magma_sgesvd(MagmaNoVec, MagmaNoVec, this->ROWS, this->COLUMNS, r, this->ROWS, v1, u, this->ROWS, vtrans, this->COLUMNS, hwork, lwork, &info);
+    lapackf77_slacpy(MagmaFullStr, &(m.ROWS), &(m.COLUMNS), m.data, &(m.ROWS), r, &(m.COLUMNS));
+    magma_sgesvd(MagmaNoVec, MagmaNoVec, m.ROWS, m.COLUMNS, r, m.ROWS, v1, u, m.ROWS, vtrans, m.COLUMNS, hwork, lwork, &info);
 
     // free(u);
     // free(vtrans);
     // free(v1);
     magma_free_pinned(r);
     magma_free_pinned(hwork);
-
-    return std::tuple<float*, float*, float*>(u, vtrans, v1);
+    if (info == 0){
+        return std::tuple<float*, float*, float*>(u, vtrans, v1);
 
     }
+    else if (info > 0){
+        std::cerr << "Error : Failed because " << info << "superdiagonals did not converge to zero " << std::endl;
+        exit(1);
+    }
+    else {
+        std::cerr << "Error : Illegal value has been detected on the argument n° " << info << std::endl;
+        exit(1);
+    }
+    }
 
-#endif
+// #endif

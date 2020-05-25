@@ -7,8 +7,8 @@
 #include <sstream>
 
 #include "advancedOperationsKernel.cuh"
-#include "../../GpuMatrix.h"
-#include "../generalInformation/generalInformation.h"
+#include "../../GpuMatrix.hpp"
+#include "../generalInformation/generalInformation.hpp"
 // #include "../../GPUOperations.h"
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -45,7 +45,7 @@ GpuMatrix<T> GpuMatrix<T>::transpose(void){
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
     float sharedMemorySize = (float)(this->ROWS*this->COLUMNS)/(float)(carre(THREADS_PER_BLOCK_DIM)* blocksPerGrid.x * blocksPerGrid.y);
-    transpose<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, d_dataTranspose, this->ROWS, this->COLUMNS);
+    transposeKernel<<<blocksPerGrid, threadsPerBlock, ceil(sharedMemorySize)*carre(THREADS_PER_BLOCK_DIM)*sizeof(T)>>>(da, d_dataTranspose, this->ROWS, this->COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(dataTranspose,  d_dataTranspose, SIZE, cudaMemcpyDeviceToHost));
@@ -55,20 +55,20 @@ GpuMatrix<T> GpuMatrix<T>::transpose(void){
     gpuErrchk(cudaFree(da));
     gpuErrchk(cudaFree(d_dataTranspose));
 
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(this->ROWS, this->COLUMNS, dataTranspose);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(this->ROWS, this->COLUMNS, dataTranspose);
     // toReturn.ROWS = a.COLUMNS;
     // toReturn.COLUMNS = a.ROWS;
     // toReturn.data = dataTranspose;
     return toReturn;
 }
 
-template <class T>
-GpuMatrix<T> GpuMatrix<T>::dot(GpuMatrix<T> a, GpuMatrix<T> b){
+template <typename T>
+GpuMatrix<T> GpuMatrix<T>::dot(GpuMatrix<T> b){
     std::ostringstream alertMessage;
-    alertMessage << "Error : Those matrixes can't be multiplied check their dimensions \n In product A.B where A is "<< GET_VARIABLE_NAME(a) << "and B is " << GET_VARIABLE_NAME(b) << " : dim(A)=[" << a.ROWS
-    << "," << a.COLUMNS << "] & dim(B) = ["<< b.ROWS << "," << b.COLUMNS << "]";
-    assertm(a.ROWS == b.COLUMNS && a.COLUMNS== b.ROWS, alertMessage.str());
-    const size_t SIZE = a.ROWS*b.COLUMNS*sizeof(T);
+    alertMessage << "Error : Those matrixes can't be multiplied check their dimensions \n In product A.B where A is "<< GET_VARIABLE_NAME(this) << "and B is " << GET_VARIABLE_NAME(b) << " : dim(A)=[" << this->ROWS
+    << "," << this->COLUMNS << "] & dim(B) = ["<< b.ROWS << "," << b.COLUMNS << "]";
+    assertm(this->ROWS == b.COLUMNS && this->COLUMNS== b.ROWS, alertMessage.str());
+    const size_t SIZE = this->ROWS*b.COLUMNS*sizeof(T);
     T *da, *db, *d_dataProduct, *dataProduct;
 
     gpuErrchk(cudaHostAlloc((void**)&dataProduct, SIZE, cudaHostAllocDefault));
@@ -76,13 +76,13 @@ GpuMatrix<T> GpuMatrix<T>::dot(GpuMatrix<T> a, GpuMatrix<T> b){
     gpuErrchk(cudaMalloc((void**)&db, SIZE));
     gpuErrchk(cudaMalloc((void**)&d_dataProduct, SIZE));
 
-    gpuErrchk(cudaMemcpy(da, a.data, SIZE, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(da, this->data, SIZE, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(db, b.data, SIZE, cudaMemcpyHostToDevice));
 
-    dim3 blocksPerGrid(min(ceil((float)a.ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)a.COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
+    dim3 blocksPerGrid(min(ceil((float)this->ROWS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[0]) , min(ceil((float)this->COLUMNS/(float)THREADS_PER_BLOCK_DIM), deviceProps.maxGridSize[1]));
     dim3 threadsPerBlock(THREADS_PER_BLOCK_DIM, THREADS_PER_BLOCK_DIM);
 
-    dot<<<blocksPerGrid, threadsPerBlock>>>(da, db, d_dataProduct, a.ROWS, b.COLUMNS);
+    dotKernel<<<blocksPerGrid, threadsPerBlock>>>(da, db, d_dataProduct, this->ROWS, b.COLUMNS);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaMemcpy(dataProduct,  d_dataProduct, SIZE, cudaMemcpyDeviceToHost));
@@ -91,7 +91,7 @@ GpuMatrix<T> GpuMatrix<T>::dot(GpuMatrix<T> a, GpuMatrix<T> b){
     gpuErrchk(cudaFree(db));
     gpuErrchk(cudaFree(da));
     
-    GpuMatrix<T> toReturn = new GpuMatrix<T>(a.ROWS, b.COLUMNS, dataProduct);
+    GpuMatrix<T> toReturn = GpuMatrix<T>(this->ROWS, b.COLUMNS, dataProduct);
     // toReturn.ROWS = a.ROWS;
     // toReturn.COLUMNS = a.COLUMNS;
     // toReturn.data = dataProduct;

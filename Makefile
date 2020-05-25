@@ -73,10 +73,11 @@ install : $(OBJS)
 	@mkdir -p $(FINAL_DEST)/include
 	@mkdir -p $(FINAL_DEST)/lib
 	@mv $(LIBRARY_NAME).a $(FINAL_DEST)/lib
+	@cp -r $(MAGMA_ROOT_DIR)/lib/* $(FINAL_DEST)/lib
 	@mv $(LIBRARY_NAME).so $(FINAL_DEST)/lib
-	@cp $(SRC_DIR)/GpuMatrix.h $(FINAL_DEST)/include
+	@cp $(SRC_DIR)/GpuMatrix.hpp $(FINAL_DEST)/include
 	@if [ "$(FINAL_DEST)" != *"$(LD_LIBRARY_PATH)"* ]; then\
-		echo "Note : Think about adding this library to LD_LIBRARY_PATH through .bashrc file and then source .bashrc ";\
+		echo "Note : Think about adding this library and magma to LD_LIBRARY_PATH through .bashrc file and then source .bashrc ";\
 	fi
 	@echo Success, libraries installed.
 
@@ -88,7 +89,7 @@ $(SRC_DIR)/.o : %.cpp
 	$(CC) $(CC_FLAGS) -c $< -o $@ 
 
 # Compile C++ source files to object files:
-$(OBJ_DIR)/GpuMatrix.o : $(SRC_DIR)/GpuMatrix.cpp $(SRC_DIR)/GpuMatrix.h
+$(OBJ_DIR)/GpuMatrix.o : $(SRC_DIR)/GpuMatrix.cpp $(SRC_DIR)/GpuMatrix.hpp
 	$(CC) $(CC_FLAGS) -c $< -o $@
 
 $(OBJ_DIR)/advancedOperationsInterfaceMagma.o : $(CUDA_DIR)/advancedOperations/advancedOperationsInterface.cpp
