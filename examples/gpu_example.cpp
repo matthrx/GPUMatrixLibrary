@@ -1,32 +1,32 @@
 /*
 Compiled with the following instruction
-g++ -Wall -L/usr/local/gpuMatrix-1.0.0/lib -I/usr/local/gpuMatrix-1.0.0/include -o example example.cpp -lgpumatrix
+g++ -Wall -L/usr/local/gpuMatrix-1.0.0/lib -I/usr/local/gpuMatrix-1.0.0/include -o gpu_example gpu_example.cpp -lgpumatrix
 */
 
 #include <iostream>
 #include <cstdlib>
 #include <chrono>
+#include <string>
 #include "GpuMatrix.hpp"
 
 
 int main(void){
-    matrixGPU_init(false);
+    matrixGPU_init(true);
 
-    GpuMatrix<double> matrixA = GpuMatrix<double>(10, 10);
-    GpuMatrix<double> matrixB = GpuMatrix<double>(300, 300);
+    const int COLUMNS = 300;
+    const int ROWS = 300;
+    GpuMatrix<double> matrixA = GpuMatrix<double>(ROWS, COLUMNS);
+    GpuMatrix<double> matrixB = GpuMatrix<double>(ROWS, COLUMNS);
 
     for (unsigned int i = 0; i<(matrixA.ROWS*matrixA.COLUMNS); i++){
         *(matrixA.data + i) = rand()%10;
         *(matrixB.data + i) = rand()%10;
     }
     matrixA.matrixGPU_print(10, 10);
-    matrixA.data[5]=-3;
-    std::cout << matrixA.minGpuMatrix() << std::endl;
-    matrixA.matrixGPU_print(10, 10);
     std::chrono::steady_clock::time_point begin_measure = std::chrono::steady_clock::now();
     GpuMatrix<double> matrixC = matrixA.dot(matrixB);
     std::chrono::steady_clock::time_point end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for GPU dot operation = " << std::chrono::duration_cast<std::chrono::milliseconds>(end_measure - begin_measure).count() << "[ms]" << std::endl;
+    std::cout << "Time for GPU dot operation = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() << "[us]" << std::endl;
 
     std::cout << "---------------------------------------" << std::endl;
     std::cout << "Sum operation" << std::endl;
@@ -35,13 +35,30 @@ int main(void){
     end_measure = std::chrono::steady_clock::now();
     std::cout << "Time for GPU sum operation = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() << "[us]" << std::endl;
 
-    double minMatrixA = matrixA.minGpuMatrix();
-    std::cout << "Minimum of matrix A is " << minMatrixA << std::endl;
+    begin_measure = std::chrono::steady_clock::now();
+    GpuMatrix<double> matrixE = matrixA*matrixB;
+    end_measure = std::chrono::steady_clock::now();
+    std::cout << "Time for product full matrix on GPU is" << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
 
-    matrixA.matrixGPU_print(10, 10);
+
+    begin_measure = std::chrono::steady_clock::now();
+    double minMatrixA = matrixA.minGpuMatrix();
+    end_measure = std::chrono::steady_clock::now();
+    std::cout << "Time for minimum on GPU" << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() << " [us]" << std::endl;
+
+    begin_measure = std::chrono::steady_clock::now();
+    double maxMatrixD = matrixB.maxGpuMatrix();
+    end_measure = std::chrono::steady_clock::now();
+    std::cout << "Time for maximum on GPU is " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
+
+
+    begin_measure = std::chrono::steady_clock::now();
+    double maxMatrixE = matrixE.meanGpuMatrix();
+    end_measure = std::chrono::steady_clock::now();
+    std::cout << "Time for mean on GPU is " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
+
+
     matrixA.freeMatrixGPU();
     matrixB.freeMatrixGPU();
-    matrixD.freeMatrixGPU();
-
     return 0;
 }

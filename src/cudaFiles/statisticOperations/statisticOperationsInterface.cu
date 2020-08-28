@@ -143,22 +143,3 @@ T GpuMatrix<T>::meanGpuMatrix(void){
 }
 
 
-
-// int main(void){
-//     double sum;
-//     struct Matrix<double> matrix= Matrix<double>{10000, 10000, new double[10000*10000]};
-//     for (unsigned int i = 0; i<matrix.ROWS*matrix.COLUMNS; i++){
-//         matrix.data[i] = (rand() % 100)+5;
-//         sum += matrix.data[i];
-//         // std::cout << "Value " << i << " : " << matrix.data[i] << " ---" << std::flush;
-//     }
-//     double minGPU = maxGPUMatrixFunction(matrix);
-//     std::cout << "Max GPU : " << minGPU << std::endl; 
-//     std::cout << "Moyenne CPU : " << sum/(matrix.COLUMNS*matrix.ROWS) << std::endl;
-
-//     delete [] matrix.data;
-//     return 0;
-// }
-// template int GpuMatrix<int>::minGpuMatrix(void);
-// template float GpuMatrix<float>::minGpuMatrix(void);
-// template double GpuMatrix<double>::minGpuMatrix(void);
