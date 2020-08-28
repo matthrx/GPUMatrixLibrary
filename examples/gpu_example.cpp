@@ -38,24 +38,28 @@ int main(void){
     begin_measure = std::chrono::steady_clock::now();
     GpuMatrix<double> matrixE = matrixA*matrixB;
     end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for product full matrix on GPU is" << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
+    std::cout << "Time for product full matrix on GPU = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
 
+    begin_measure = std::chrono::steady_clock::now();
+    GpuMatrix<double> matrixInverse = GpuMatrix<double>::inverse(matrixA);
+    end_measure = std::chrono::steady_clock::now();
+    std::cout << "Time for inverse full matrix on GPU = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
 
     begin_measure = std::chrono::steady_clock::now();
     double minMatrixA = matrixA.minGpuMatrix();
     end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for minimum on GPU" << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() << " [us]" << std::endl;
+    std::cout << "Time for minimum on GPU = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() << " [us]" << std::endl;
 
     begin_measure = std::chrono::steady_clock::now();
     double maxMatrixD = matrixB.maxGpuMatrix();
     end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for maximum on GPU is " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
+    std::cout << "Time for maximum on GPU is = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
 
 
     begin_measure = std::chrono::steady_clock::now();
     double maxMatrixE = matrixE.meanGpuMatrix();
     end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for mean on GPU is " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
+    std::cout << "Time for mean on GPU is = " << std::chrono::duration_cast<std::chrono::microseconds>(end_measure - begin_measure).count() <<  "[us]" << std::endl;
 
 
     matrixA.freeMatrixGPU();
