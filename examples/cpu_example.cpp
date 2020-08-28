@@ -43,7 +43,7 @@ int main(void){
     std::chrono::steady_clock::time_point begin_measure = std::chrono::steady_clock::now();
     auto E = arma::mean(C);
     std::chrono::steady_clock::time_point end_measure = std::chrono::steady_clock::now();
-    std::cout << "Time for CPU dot operation = " << std::chrono::duration_cast<std::chrono::milliseconds>(end_measure - begin_measure).count() << "[ms]" << std::endl;
+    std::cout << "Time for CPU mean operation = " << std::chrono::duration_cast<std::chrono::milliseconds>(end_measure - begin_measure).count() << "[ms]" << std::endl;
 
 
     return 0;
